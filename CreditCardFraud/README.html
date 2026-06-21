@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Card Fraud Detection Dashboard</title>
+  <meta name="description" content="Interactive machine learning dashboard for credit card fraud detection — built with Streamlit, scikit-learn, XGBoost, and LightGBM." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #0d1b2a;
+      --surface:   #16213e;
+      --surface2:  #0f3460;
+      --border:    #1e3a5f;
+      --primary:   #00b4d8;
+      --success:   #06d6a0;
+      --warning:   #f4a261;
+      --danger:    #ff6b6b;
+      --gold:      #ffd700;
+      --silver:    #c0c0c0;
+      --bronze:    #cd7f32;
+      --text:      #e0e0e0;
+      --muted:     #8899aa;
+      --radius:    12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #0d1b2a 0%, #0f3460 50%, #0d1b2a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 3.5rem 2rem 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(0,180,216,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-icon { font-size: 3.5rem; display: block; margin-bottom: 1rem; }
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #00b4d8, #06d6a0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.8rem;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto 1.5rem;
+    }
+    .badge-row {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      justify-content: center;
+    }
+    .badge {
+      background: rgba(0,180,216,0.12);
+      border: 1px solid rgba(0,180,216,0.35);
+      color: var(--primary);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    /* ── Section ──────────────────────────────────────────── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── Table ────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead tr {
+      background: var(--surface2);
+    }
+    th {
+      padding: 0.7rem 1rem;
+      text-align: left;
+      color: var(--primary);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:hover td { background: rgba(0,180,216,0.04); }
+    code {
+      font-family: 'Fira Code', monospace;
+      background: rgba(0,180,216,0.1);
+      color: var(--primary);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+
+    /* ── Steps ────────────────────────────────────────────── */
+    .steps { list-style: none; counter-reset: steps; }
+    .steps li {
+      counter-increment: steps;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 2rem; height: 2rem;
+      background: linear-gradient(135deg, var(--primary), #0077b6);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem; color: white;
+    }
+    .step-num::before { content: counter(steps); }
+    .step-body { flex: 1; padding-top: 0.3rem; }
+    .step-body strong { color: var(--text); }
+    .step-body .sub { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+
+    /* ── Code block ───────────────────────────────────────── */
+    .code-block {
+      background: #060e18;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.875rem;
+      color: #a8d8ea;
+      white-space: pre;
+      line-height: 1.6;
+    }
+
+    /* ── Launch cards ─────────────────────────────────────── */
+    .launch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .launch-card {
+      background: linear-gradient(135deg, var(--surface2), #0a2040);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .launch-card .icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+    .launch-card h3 { font-size: 0.9rem; color: var(--primary); margin-bottom: 0.4rem; }
+    .launch-card p { font-size: 0.82rem; color: var(--muted); }
+    .launch-card code { display: block; margin-top: 0.6rem; font-size: 0.82rem; }
+
+    /* ── Feature tabs ─────────────────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: rgba(0,180,216,0.05);
+      border: 1px solid rgba(0,180,216,0.2);
+      border-radius: var(--radius);
+      padding: 1.1rem;
+    }
+    .feature-card .tab-icon { font-size: 1.5rem; }
+    .feature-card h3 { font-size: 0.9rem; color: var(--primary); margin: 0.4rem 0 0.3rem; }
+    .feature-card p { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Leaderboard ──────────────────────────────────────── */
+    .lb-row {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border);
+    }
+    .lb-row.gold   { border-color: var(--gold);   background: rgba(255,215,0,0.05); }
+    .lb-row.silver { border-color: var(--silver);  background: rgba(192,192,192,0.05); }
+    .lb-row.bronze { border-color: var(--bronze);  background: rgba(205,127,50,0.05); }
+    .lb-medal { font-size: 1.4rem; flex-shrink: 0; }
+    .lb-name { flex: 1; font-weight: 600; }
+    .lb-name.gold   { color: var(--gold); }
+    .lb-name.silver { color: var(--silver); }
+    .lb-name.bronze { color: var(--bronze); }
+    .lb-stat { text-align: right; }
+    .lb-stat .val { font-size: 1rem; font-weight: 700; color: var(--success); }
+    .lb-stat .lbl { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── Troubleshoot ─────────────────────────────────────── */
+    .trouble-item {
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .trouble-item:last-child { border-bottom: none; }
+    .trouble-q { color: var(--danger); font-weight: 600; margin-bottom: 0.3rem; }
+    .trouble-a { color: var(--muted); font-size: 0.9rem; }
+    .trouble-a code { color: var(--success); background: rgba(6,214,160,0.1); }
+
+    /* ── Requirement pills ────────────────────────────────── */
+    .req-grid {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .req-pill {
+      display: flex; align-items: center; gap: 0.4rem;
+      background: #060e18;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #a8d8ea;
+    }
+    .req-pill span { color: var(--muted); }
+
+    /* ── Info banner ──────────────────────────────────────── */
+    .info-banner {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: rgba(0,180,216,0.08);
+      border: 1px solid rgba(0,180,216,0.3);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+    .info-banner .icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+    /* ── Links ────────────────────────────────────────────── */
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #48cae4; }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      .section { padding: 1.25rem; }
+      .hero    { padding: 2.5rem 1.25rem 2rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
+<div class="hero">
+  <span class="hero-icon">💳</span>
+  <h1>Credit Card Fraud Detection Dashboard</h1>
+  <p>An interactive machine learning dashboard for fraud detection —
+     built with Streamlit, scikit-learn, XGBoost, and LightGBM.</p>
+  <div class="badge-row">
+    <span class="badge">Python 3.10+</span>
+    <span class="badge">Streamlit 1.51</span>
+    <span class="badge">scikit-learn 1.8</span>
+    <span class="badge">XGBoost 3.2</span>
+    <span class="badge">LightGBM 4.6</span>
+    <span class="badge">3,492 Transactions</span>
+  </div>
+</div>
+
+<!-- ── Main content ────────────────────────────────────────── -->
+<div class="container">
+
+  <!-- Files Included -->
+  <div class="section">
+    <div class="section-title">📁 Files Included</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>fraud_dashboard.py</code></td><td>Main Streamlit dashboard</td></tr>
+          <tr><td><code>fraud_competition.py</code></td><td>ML competition + PowerPoint generator</td></tr>
+          <tr><td><code>credit.Card.Fraud.csv</code></td><td>Dataset — 3,492 transactions, 29 features</td></tr>
+          <tr><td><code>fraud_results.csv</code></td><td>Pre-computed competition leaderboard</td></tr>
+          <tr><td><code>fraud_tuning_results.csv</code></td><td>Hyperparameter tuning results</td></tr>
+          <tr><td><code>requirements.txt</code></td><td>Required Python libraries (exact versions)</td></tr>
+          <tr><td><code>install_and_run.bat</code></td><td>First-time setup + launch <em>(Windows)</em></td></tr>
+          <tr><td><code>run_dashboard.bat</code></td><td>Quick launch after initial setup</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Requirements -->
+  <div class="section">
+    <div class="section-title">⚙️ System Requirements</div>
+    <div class="info-banner">
+      <span class="icon">ℹ️</span>
+      <span>
+        <strong>Python 3.10 or higher</strong> must be installed.
+        Download the latest release from
+        <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a>.
+        During installation, make sure to check <strong>"Add Python to PATH"</strong>.
+      </span>
+    </div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1rem;">
+      <strong>pip</strong> — Python's package manager — is bundled automatically with Python 3.10+.
+    </p>
+
+    <div class="section-title" style="margin-top:1.25rem;">📦 Required Libraries</div>
+    <div class="req-grid">
+      <div class="req-pill">streamlit <span>==1.51.0</span></div>
+      <div class="req-pill">pandas <span>==2.3.1</span></div>
+      <div class="req-pill">numpy <span>==2.3.1</span></div>
+      <div class="req-pill">scikit-learn <span>==1.8.0</span></div>
+      <div class="req-pill">xgboost <span>==3.2.0</span></div>
+      <div class="req-pill">lightgbm <span>==4.6.0</span></div>
+      <div class="req-pill">plotly <span>==6.5.0</span></div>
+      <div class="req-pill">matplotlib <span>==3.10.7</span></div>
+      <div class="req-pill">seaborn <span>==0.13.2</span></div>
+      <div class="req-pill">python-pptx <span>==1.0.2</span></div>
+      <div class="req-pill">scipy <span>==1.17.0</span></div>
+    </div>
+  </div>
+
+  <!-- Getting Started -->
+  <div class="section">
+    <div class="section-title">🚀 Getting Started</div>
+
+    <ul class="steps">
+      <li>
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Download Python</strong>
+          <div class="sub">
+            Visit <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a>
+            and install Python 3.10+. During setup, tick <strong>"Add Python to PATH"</strong>.
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Download all project files</strong>
+          <div class="sub">Place all 8 files in the <em>same folder</em> on your computer.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Run the installer (first time only)</strong>
+          <div class="sub">Double-click <code>install_and_run.bat</code> — it installs all required libraries and launches the dashboard automatically.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Open the dashboard in your browser</strong>
+          <div class="sub">
+            Navigate to
+            <a href="http://localhost:8501" target="_blank">http://localhost:8501</a>
+            — Streamlit will usually open this automatically.
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <p style="margin-top:1.25rem; color:var(--muted); font-size:0.9rem;">
+      ⚡ <strong>Next time:</strong> just double-click <code>run_dashboard.bat</code> — no reinstall needed.
+    </p>
+
+    <div class="section-title" style="margin-top:1.5rem;">💻 Manual Install (Terminal)</div>
+    <div class="code-block">
+      <pre>pip install -r requirements.txt
+streamlit run fraud_dashboard.py</pre>
+    </div>
+  </div>
+
+  <!-- Dashboard Features -->
+  <div class="section">
+    <div class="section-title">📊 Dashboard Features</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="tab-icon">📊</div>
+        <h3>Summary Statistics</h3>
+        <p>Dataset overview, feature distributions by class, correlation heatmap, data quality checks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tab-icon">🏆</div>
+        <h3>Model Competition</h3>
+        <p>Leaderboard of 8 algorithms ranked by F1-score, ROC curves, and interactive confusion matrices.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tab-icon">⚙️</div>
+        <h3>Hyperparameter Tuning</h3>
+        <p>Select any model, adjust parameters with sliders, and see cross-validation results in real time.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Competition Results -->
+  <div class="section">
+    <div class="section-title">🏆 Competition Results</div>
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:1rem;">
+      8 classifiers evaluated using 5-fold stratified cross-validation. Ranked by F1-score.
+    </p>
+
+    <div class="lb-row gold">
+      <span class="lb-medal">🥇</span>
+      <span class="lb-name gold">Random Forest</span>
+      <div class="lb-stat"><div class="val">0.9886</div><div class="lbl">F1 Score</div></div>
+      <div class="lb-stat"><div class="val">0.9800</div><div class="lbl">AUC-ROC</div></div>
+    </div>
+    <div class="lb-row silver">
+      <span class="lb-medal">🥈</span>
+      <span class="lb-name silver">LightGBM</span>
+      <div class="lb-stat"><div class="val">0.9876</div><div class="lbl">F1 Score</div></div>
+      <div class="lb-stat"><div class="val">0.9809</div><div class="lbl">AUC-ROC</div></div>
+    </div>
+    <div class="lb-row bronze">
+      <span class="lb-medal">🥉</span>
+      <span class="lb-name bronze">XGBoost</span>
+      <div class="lb-stat"><div class="val">0.9874</div><div class="lbl">F1 Score</div></div>
+      <div class="lb-stat"><div class="val">0.9810</div><div class="lbl">AUC-ROC</div></div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:1.25rem;">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Model</th><th>F1 Score</th><th>AUC-ROC</th><th>Accuracy</th><th>Precision</th><th>Recall</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>4</td><td>Gradient Boosting</td><td>0.9863</td><td>0.9815</td><td>0.9762</td><td>0.9783</td><td>0.9943</td></tr>
+          <tr><td>5</td><td>K-Nearest Neighbors</td><td>0.9844</td><td>0.9532</td><td>0.9728</td><td>0.9711</td><td>0.9980</td></tr>
+          <tr><td>6</td><td>SVM (RBF)</td><td>0.9839</td><td>0.9822</td><td>0.9722</td><td>0.9811</td><td>0.9866</td></tr>
+          <tr><td>7</td><td>Logistic Regression</td><td>0.9811</td><td>0.9765</td><td>0.9676</td><td>0.9845</td><td>0.9776</td></tr>
+          <tr><td>8</td><td>Decision Tree</td><td>0.9749</td><td>0.9348</td><td>0.9573</td><td>0.9808</td><td>0.9693</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="section">
+    <div class="section-title">❓ Troubleshooting</div>
+
+    <div class="trouble-item">
+      <div class="trouble-q">❌ <code>streamlit: command not found</code></div>
+      <div class="trouble-a">→ Open a terminal and run: <code>pip install streamlit</code></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-q">❌ <code>ModuleNotFoundError</code></div>
+      <div class="trouble-a">→ Run: <code>pip install -r requirements.txt</code></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-q">❌ Port already in use</div>
+      <div class="trouble-a">→ Run: <code>streamlit run fraud_dashboard.py --server.port 8502</code>
+      <br>Then open <a href="http://localhost:8502" target="_blank">http://localhost:8502</a></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-q">❌ Python not recognized</div>
+      <div class="trouble-a">→ Reinstall Python from
+        <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a>
+        and make sure to check <strong>"Add Python to PATH"</strong> during setup.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  Credit Card Fraud Detection Dashboard &nbsp;|&nbsp;
+  Built with
+  <a href="https://streamlit.io" target="_blank" rel="noopener">Streamlit</a>,
+  <a href="https://scikit-learn.org" target="_blank" rel="noopener">scikit-learn</a>,
+  <a href="https://xgboost.readthedocs.io" target="_blank" rel="noopener">XGBoost</a>,
+  <a href="https://lightgbm.readthedocs.io" target="_blank" rel="noopener">LightGBM</a>
+  &nbsp;|&nbsp; Python 3.10+
+</footer>
+
+</body>
+</html>
